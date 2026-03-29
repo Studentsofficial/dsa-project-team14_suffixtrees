@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Log Insight Analyzer</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+    <div class="app">
+        <header class="app-header">
+            <div class="brand">
+                <div class="brand-mark">LI</div>
+                <div class="brand-text">
+                    <h1>Log Insight Analyzer</h1>
+                    <p>Upload logs, detect patterns, and surface anomalies.</p>
+                </div>
+            </div>
+        </header>
+
+        <main class="app-main">
+            <section class="card upload-card">
+                <h2>Upload log file</h2>
+                <p class="subtitle">
+                    Supported: plain text log files. Each line will be parsed and analyzed on the server.
+                </p>
+
+                <form id="uploadForm" class="upload-form" enctype="multipart/form-data">
+                    <label class="file-drop" for="fileInput">
+                        <input id="fileInput" type="file" name="file" required />
+                        <span class="file-drop-icon">📁</span>
+                        <span class="file-drop-text">
+                            <strong>Drop a log file here</strong> or click to browse
+                        </span>
+                        <span id="fileName" class="file-name">No file selected</span>
+                    </label>
+
+                    <div class="actions">
+                        <button id="analyzeBtn" type="submit">
+                            <span class="btn-label">Analyze logs</span>
+                            <span class="btn-spinner" aria-hidden="true"></span>
+                        </button>
+
+                        <!-- NEW BUTTON (added only this) -->
+                        <button type="button" id="historyBtn">
+                            View Previous Reports
+                        </button>
+
+                        <p class="hint">
+                            The analysis may take a few seconds for large files. Results appear below.
+                        </p>
+                    </div>
+                </form>
+            </section>
+
+            <section class="card info-card">
+                <h3>What you get</h3>
+                <ul class="feature-list">
+                    <li><strong>Summary</strong> of total logs and level distribution.</li>
+                    <li><strong>Behavioral bursts</strong> where similar messages spike together.</li>
+                    <li><strong>Structural anomalies</strong> that look unlike the rest of your traffic.</li>
+                </ul>
+            </section>
+        </main>
+
+        <!-- RESULT -->
+        <section class="card result-card" id="resultCard" style="display:none; margin-top:20px;">
+            <h2>Analysis Result</h2>
+            <pre id="resultContent"></pre>
+        </section>
+
+        <!-- HISTORY (NEW) -->
+        <section class="card result-card" id="historyCard" style="display:none; margin-top:20px;">
+            <h2>Previous Reports</h2>
+            <pre id="historyContent"></pre>
+        </section>
+
+        <footer class="app-footer">
+            <span>Backend running at <code>http://localhost:8080</code></span>
+        </footer>
+    </div>
+
+<script>
+
+const fileInput = document.getElementById('fileInput');
+const fileName = document.getElementById('fileName');
+const form = document.getElementById('uploadForm');
+const analyzeBtn = document.getElementById('analyzeBtn');
+
+const resultCard = document.getElementById('resultCard');
+const resultContent = document.getElementById('resultContent');
+
+const historyBtn = document.getElementById('historyBtn');
+const historyCard = document.getElementById('historyCard');
+const historyContent = document.getElementById('historyContent');
+
+fileInput.addEventListener('change', () => {
+    if (fileInput.files && fileInput.files.length > 0) {
+        fileName.textContent = fileInput.files[0].name;
+        fileName.classList.add('has-file');
+    } else {
+        fileName.textContent = 'No file selected';
+        fileName.classList.remove('has-file');
+    }
+});
+
+form.addEventListener('submit', async (e) => {
+
+    e.preventDefault();
+
+    if (!fileInput.files.length) return;
+
+    analyzeBtn.disabled = true;
+    form.classList.add('is-loading');
+
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+
+    try {
+
+        const response = await fetch('http://localhost:8080/upload', {
+            method: 'POST',
+            body: formData
+        });
+
+        const text = await response.text();
+
+        resultContent.textContent = text;
+        resultCard.style.display = 'block';
+        resultCard.scrollIntoView({ behavior: 'smooth' });
+
+    } catch (err) {
+
+        resultContent.textContent = "Error contacting backend.";
+        resultCard.style.display = 'block';
+
+    }
+
+    analyzeBtn.disabled = false;
+    form.classList.remove('is-loading');
+});
+
+historyBtn.addEventListener('click', async () => {
+
+    try {
+
+        const response = await fetch('http://localhost:8080/reports');
+        const text = await response.text();
+
+        historyContent.textContent = text;
+        historyCard.style.display = 'block';
+        historyCard.scrollIntoView({ behavior: 'smooth' });
+
+    } catch {
+
+        historyContent.textContent = "Failed to load reports.";
+        historyCard.style.display = 'block';
+
+    }
+
+});
+
+</script>
+
+</body>
+</html>
